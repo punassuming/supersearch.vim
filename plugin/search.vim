@@ -2,7 +2,7 @@ let g:indexed_search_colors=0
 " File:         IndexedSearch.vim
 " Author:       Yakov Lerner <iler.ml@gmail.com>
 " URL:          http://www.vim.org/scripts/script.php?script_id=1682
-" Last change: 2012 Jan 25
+" Last change: 2012 Feb 07
 "
 " This script redefines 6 search commands (/,?,n,N,*,#). At each search,
 " it shows at which match number you are, and the total number 
@@ -86,6 +86,7 @@ command! ShowSearchIndex :call s:ShowCurrentSearchIndex(1,'')
 "                @/ and direction is restored at return from function
 "                We must have op invocation at the toplevel of mapping even though this
 "                makes mappings longer.
+
 nnoremap <silent><m-s> :let v:errmsg=''<cr>:silent! norm! *zvzz<cr>:call <sid>SearchChecklist()<cr>
 nnoremap <silent><m-r> :let v:errmsg=''<cr>:silent! norm! #zvzz<cr>:call <sid>SearchChecklist()<cr>
 nnoremap <silent>n :let v:errmsg=''<cr>:silent! norm! nzvzz<cr>:call <sid>SearchChecklist()<cr>
@@ -99,25 +100,45 @@ function! s:SearchChecklist()
     call <SID>ShowCurrentSearchIndex(0,'!')
 endfunction
 
+" Redraw the screen and removes any search highlighting.
+noremap <esc><esc> :noh<cr>:call clearmatches()<cr>
+
+" Open a Quickfix window for the last search
+nnoremap <silent> <leader>/ :execute 'vimgrep /'.@/.'/g %'<CR>:copen<CR>
+
+function! s:VSetSearch()
+    let temp = @@
+    norm! gvy
+    let @/ = '\V' . substitute(escape(@@, '\'), '\n', '\\n', 'g')
+    let @@ = temp
+endfunction
+
+vnoremap * :<C-u>call <SID>VSetSearch()<CR>//<CR><c-o>
+vnoremap # :<C-u>call <SID>VSetSearch()<CR>??<CR><c-o>
 
 nnoremap <silent> z/ :call <sid>ToggleSearchFold(1)<cr>
 
-function! s:ToggleSearchFold(arg)
-    if exists("b:foldmethod") && a:arg == 1
+function! s:ToggleSearchFold(toggle)
+    if exists("b:foldmethod") && a:toggle == 1
         execute "set foldmethod=".b:foldmethod
         execute "set foldtext=".b:foldtext
+        execute "set foldexpr=".b:foldexpr
         unlet b:foldmethod
         unlet b:foldtext
-    else 
-        if a:arg == 1
+        unlet b:foldexpr
+    elseif exists("b:foldmethod") && a:toggle == 0
+        set foldexpr=Foldexpr_search(v:lnum)
+    elseif !exists("b:foldmethod") && a:toggle == 1
+        if a:toggle == 1
             let b:foldmethod=&foldmethod
+            let b:foldexpr=&foldexpr
             let b:foldtext=&foldtext
             set foldenable
             set foldlevel=1
             set foldmethod=expr
             set foldtext=getline(v:foldstart)
+            set foldexpr=Foldexpr_search(v:lnum)
         endif
-        set foldexpr=Foldexpr_search(v:lnum)
     endif
 endfunction
 
