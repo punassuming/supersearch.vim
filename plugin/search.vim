@@ -2,7 +2,7 @@ let g:indexed_search_colors=0
 " File:         IndexedSearch.vim
 " Author:       Yakov Lerner <iler.ml@gmail.com>
 " URL:          http://www.vim.org/scripts/script.php?script_id=1682
-" Last change: 2012 Feb 07
+" Last change: 2013 Jun 19
 "
 " This script redefines 6 search commands (/,?,n,N,*,#). At each search,
 " it shows at which match number you are, and the total number 
@@ -87,17 +87,20 @@ command! ShowSearchIndex :call s:ShowCurrentSearchIndex(1,'')
 "                We must have op invocation at the toplevel of mapping even though this
 "                makes mappings longer.
 
-nnoremap <silent><m-s> :let v:errmsg=''<cr>:silent! norm! *zvzz<cr>:call <sid>SearchChecklist()<cr>
-nnoremap <silent><m-r> :let v:errmsg=''<cr>:silent! norm! #zvzz<cr>:call <sid>SearchChecklist()<cr>
-nnoremap <silent>n :let v:errmsg=''<cr>:silent! norm! nzvzz<cr>:call <sid>SearchChecklist()<cr>
-nnoremap <silent>N :let v:errmsg=''<cr>:silent! norm! Nzvzz<cr>:call <sid>SearchChecklist()<cr>
-nnoremap <silent>* :let v:errmsg=''<cr>:silent! norm! *zvzz<cr>:call <sid>SearchChecklist()<cr>
-nnoremap <silent># :let v:errmsg=''<cr>:silent! norm! #zvzz<cr>:call <sid>SearchChecklist()<cr>
+nnoremap <silent><m-s> :let v:errmsg=''<cr>:silent! norm! *<cr>:call <sid>SearchChecklist()<cr>
+nnoremap <silent><m-r> :let v:errmsg=''<cr>:silent! norm! #<cr>:call <sid>SearchChecklist()<cr>
+nnoremap <silent>n :let v:errmsg=''<cr>:silent! norm! n<cr>:call <sid>SearchChecklist()<cr>
+nnoremap <silent>N :let v:errmsg=''<cr>:silent! norm! N<cr>:call <sid>SearchChecklist()<cr>
+nnoremap <silent>* :let v:errmsg=''<cr>:silent! norm! *<cr>:call <sid>SearchChecklist()<cr>
+nnoremap <silent># :let v:errmsg=''<cr>:silent! norm! #<cr>:call <sid>SearchChecklist()<cr>
 
 function! s:SearchChecklist()
-    call <sid>ToggleSearchFold(0)
-    " call <sid>PulseCursorLine()
-    call <SID>ShowCurrentSearchIndex(0,'!')
+  silent! normal! zv
+  call <sid>ToggleSearchFold(0)
+  if line('.') != line("''") " if the line has changed
+    call <sid>PulseCursorLine()
+  endif
+  call <SID>ShowCurrentSearchIndex(0,'!')
 endfunction
 
 " Redraw the screen and removes any search highlighting.
@@ -173,15 +176,16 @@ function! s:PulseCursorLine()
     " windo set nocursorline
     " execute current_window . 'wincmd w'
 
+    let oldcur = &cursorline 
     setlocal cursorline
 
-    " redir => old_cur
-    " silent execute 'hi Cursor'
-    " redir END 
-    " let old_cur = split(old_cur, '\n')[0]
-    " let old_cur = substitute(old_cur, 'xxx', '', '')
+    redir => old_cur
+    silent execute 'hi Cursor'
+    redir END 
+    let old_cur = split(old_cur, '\n')[0]
+    let old_cur = substitute(old_cur, 'xxx', '', '')
 
-    " hi Cursor          guifg=fg guibg=bg
+    hi Cursor          guifg=fg guibg=bg
 
     redir => old_hi
     silent execute 'hi CursorLine'
@@ -189,36 +193,33 @@ function! s:PulseCursorLine()
     let old_hi = split(old_hi, '\n')[0]
     let old_hi = substitute(old_hi, 'xxx', '', '')
 
-    " hi CursorLine guibg=#2a2a2a ctermbg=233
-    " redraw
-    " sleep 5m
-
-    " hi CursorLine guibg=#333333 ctermbg=235
-    " redraw
-    " sleep 2m
-
-    hi CursorLine guibg=#3a3a3a ctermbg=237
-    redraw
-    sleep 3m
-
-    " hi CursorLine guibg=#444444 ctermbg=239
-    " redraw
-    " sleep 2m
-
-    " hi CursorLine guibg=#3a3a3a ctermbg=237
-    " redraw
-    " sleep 5m    
+    let hl_list = [
+          \[233,'#2a2a2a'],
+          \[235,'#333333'],
+          \[237,'#3a3a3a'],
+          \[239,'#444444'],
+          \[237,'#3a3a3a'],
+          \[235,'#333333'],
+          \[233,'#2a2a2a']]
     
-    " hi CursorLine guibg=#333333 ctermbg=235
-    " " redraw
-    " sleep 5m
-    
-    " hi CursorLine guibg=#2a2a2a ctermbg=233
-    " redraw
-    " sleep 5m
+    let hl_list = [
+          \[233,'#2a2a2a'],
+          \[237,'#3a3a3a'],
+          \[239,'#444444'],
+          \[237,'#3a3a3a'],
+          \[233,'#2a2a2a']]
+
+    for i in range(0,len(hl_list)-1)
+
+      silent! exec "hi! CursorLine ctermbg=".hl_list[i][0]." guibg=".hl_list[i][1]
+      redraw
+      sleep 10m
+
+    endfor
 
     execute 'hi ' . old_hi
-    " execute 'hi ' . old_cur
+    let &cursorline = oldcur
+    execute 'hi ' . old_cur
 
     " windo set cursorline
     " execute current_window . 'wincmd w'
